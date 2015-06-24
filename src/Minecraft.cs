@@ -15,17 +15,19 @@ namespace Exercise1
         #region Shader code
         string vertexShaderSource = @"
 #version 330
-
+//A kingdom for syntax highlighting
 precision highp float;
 
 uniform mat4 projection_matrix;
 uniform mat4 modelview_matrix;
-uniform mat4 view_matrix;
+uniform mat4 view_matrix; //needed for normal and vertex in camera space only
 uniform mat4 normal_matrix; //should be used is mat3(normal_matrix) later //is used for transforming normals(changes translation, but no rotation)
 
 in vec3 in_position;
 in vec2 in_tex;
 in vec3 vertex_normal;
+
+//take in surface normal and vertex
 
 out vec2 tex2d; 
 out vec3 camera_normal;
@@ -33,10 +35,11 @@ out vec3 camera_position;
 
 void main(void)
 {    
-  tex2d = in_tex; 
-  camera_normal = normalize(vec3(normal_matrix * vec4(vertex_normal,1)));
-  camera_position = vec3(modelview_matrix * vec4(in_position,1));
-  gl_Position = projection_matrix * modelview_matrix * vec4(in_position, 1);  
+    //Now also returning the normal(which is now transformed by the normal matrix) and the vertex position in camera space to fragment shader   
+    tex2d = in_tex; 
+    camera_normal = normalize(vec3(normal_matrix * vec4(vertex_normal,1)));
+    camera_position = vec3(modelview_matrix * vec4(in_position,1));
+    gl_Position = projection_matrix * modelview_matrix * vec4(in_position, 1);  
 }";
 
         string fragmentShaderSource = @"
@@ -50,18 +53,19 @@ uniform mat4 view_matrix;
 
 in vec2 tex2d; 
 in vec3 normal;
+//since we are not using any complex, i.e. curved surfaces, it should fine to use the surface normal instead of interpolated vertex normals
 in vec3 camera_normal;
 in vec3 camera_position;
 
 //Light position in world coordinate
 vec3 light_pos_world = vec3(0, 1.5, 0);
   
-//Light properties
+//Light properties //Full bright specular light, softer diffuse and dimm ambient
 vec3 light_spec = vec3(1, 1, 1);
 vec3 light_diff = vec3(0.8, 0.8, 0.8);
 vec3 light_amb = vec3(0.4, 0.4, 0.4);
 
-//material properties
+//material properties //influence how strongly each light component is reflected
 vec3 surface_spec = vec3(1, 1, 1);
 vec3 surface_diff = vec3(1, 1, 1);  
 vec3 surface_amb  = vec3(1, 1, 1);
@@ -71,23 +75,34 @@ out vec4 frag_color;
 
 void main(void)
 {
+    //Factor of reflected ambient
     vec3 ambient_intens = light_amb * surface_amb;
 
-    vec3 light_position_camera = vec3(view_matrix * vec4(-light_pos_world, 1)); // light in camera space
+    
+    vec3 light_position_camera = vec3(view_matrix * vec4(-light_pos_world, 1)); // light in camera space //- since we need to use a light vector pointing from vertex for angle 
     vec3 camera_light_distance = light_position_camera - camera_position; //vector from fragment to light in camera space
     vec3 camera_light_direction = normalize(camera_light_distance);
+
+    //if light hits at a negative 
+    //angle we need to use 0.0 instead so as to not produce a negative diffuse factor
+    //both vectors are normalized already so no need to divide by product of lengths for cosine factor
     float cosine_normal_light = max(dot(camera_light_direction, camera_normal) ,0.0);     
     vec3 diff_intens = light_diff * surface_diff * cosine_normal_light;
 
-
+    //returns us a vector which is the first argument reflected by the second argument
     vec3 camera_reflected = reflect(-camera_light_direction, camera_normal);
+    
+    //get the angle between the reflected light vector and the camera-vertex vector
     float spec_dot = max(dot(camera_reflected, normalize(-camera_position)), 0.0);
+
+    //Calculate specular light factor with angle between the ray and the shininess factor
     float spec_factor = pow(spec_dot, spec_exp);
     vec3 spec_intens = light_spec * surface_spec * spec_factor;
 
     // retrieve texture color for fragment
     vec4 tex_color = texture(tex_image, tex2d.xy);
   
+    //Now create a new fragment color which is influenced by light
     frag_color = tex_color * vec4(ambient_intens + diff_intens + spec_intens ,1); 
 }";
         #endregion
@@ -103,9 +118,9 @@ void main(void)
             viewMatrixLocation;
 
         Stopwatch time = new Stopwatch();
-        
 
-        Matrix4 projectionMatrix, viewMatrix, normalMatrix; //normalMatrix is transposed inverse of mv-mat
+        //normalMatrix is transposed inverse of mv-mat, used for recalculating normals after transformation
+        Matrix4 projectionMatrix, viewMatrix, normalMatrix;  
 
         CubeFactory cubeFactory;
         Cube texturedCube;
@@ -182,7 +197,7 @@ void main(void)
             projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(0.7f, aspect, 0.1f, 100.0f);
             GL.UniformMatrix4(projectionMatrixLocation, false, ref projectionMatrix);
 
-            // For the start, set modelview matrix of shader to view matrix of opengl camera
+            // For the start, set modelview matrix of shader to view matrix of opengl camera, normal_matrix only passed for testing here
             viewMatrix = Matrix4.LookAt(new Vector3(8.0f, 8.0f, 8.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0.0f, 1.0f, 0.0f));
             GL.UniformMatrix4(viewMatrixLocation, false, ref viewMatrix);
             GL.UniformMatrix4(modelviewMatrixLocation, false, ref viewMatrix);
@@ -204,7 +219,6 @@ void main(void)
             // given texture.
             //cubeFactory = new CubeFactory("../../pattern.png");
             cubeFactory = new CubeFactory("../../texture_steve_new.png");
-            // 
             texturedCube = cubeFactory.createTexturedCube();
             time.Start();
         }
@@ -228,12 +242,6 @@ void main(void)
        
         Matrix4 rotMat = Matrix4.Identity;
 
-        //LimitedRotation head = new LimitedRotation('y', false, 10);
-        LimitedRotation rightArm = new LimitedRotation('x', true, 8);
-        LimitedRotation leftArm = new LimitedRotation('x', false, 8);
-        LimitedRotation rightLeg = new LimitedRotation('x', false, 8);
-        LimitedRotation leftLeg = new LimitedRotation('x', true, 8);
-
         double count = 0;
         protected override void OnRenderFrame(FrameEventArgs e)
         {
@@ -248,12 +256,26 @@ void main(void)
             // Render cube with modified scale 
             // Matrix4.CreateRotationY(10 * (float)Math.PI / 180) * Matrix4.CreateTranslation(DateTime.Now.Millisecond / 10 * (float)Math.PI / 180, 0f, 0f)
 
+            //Each of these calls boils down to the same pattern:
+            /*
+             *Bind the appropriate VAO for the different texture coordinates
+             *Then adjust the scale of the cube
+             *Bring it into the correct position for the body
+             *Apply a Sine-based Rotation for movement back and forth (opposing parts have a reversed rotation to mimmick walking)
+             *Move object out to change center of rotation
+             *Apply rotation to create movement in circle around center
+             *Apply viewMatrix
+             *Create new normal matrix based on changed mv-matrix and pass it into the uniform
+             *Issue draw call
+             *Floor and light position do not share the constant transformations
+             */
+
             rotMat = Matrix4.CreateRotationY((float)-Math.Sin(e.Time) / 1.3f) * rotMat;
             
             GL.BindVertexArray(texturedCube.VAOHandles[0]);
             //Head
             // Matrix4 modelviewMatrix = Matrix4.CreateScale(1f, 1f, 1f) * Matrix4.CreateTranslation(0f, 0f, 0f) * head.getRotMat(e.Time * 1.2f) * Matrix4.CreateTranslation(2f, 0f, 0f) * rotMat * viewMatrix; 
-            Matrix4 modelviewMatrix = Matrix4.CreateScale(1f, 1f, 1f) * Matrix4.CreateTranslation(0f, -0.2f, 0f) * Matrix4.CreateRotationY((float)Math.Sin(count / 2) * 0.3f) * Matrix4.CreateTranslation(3f, 0f, 0f) * rotMat * viewMatrix; 
+            Matrix4 modelviewMatrix = Matrix4.CreateScale(1f, 1f, 1f) * Matrix4.CreateTranslation(0f, -0.2f, 0f) * Matrix4.CreateRotationY((float)Math.Sin(count / 2) * 0.5f) * Matrix4.CreateTranslation(3f, 0f, 0f) * rotMat * viewMatrix; 
             GL.UniformMatrix4(modelviewMatrixLocation, false, ref modelviewMatrix);
             normalMatrix = Matrix4.Invert(modelviewMatrix);
             normalMatrix.Transpose();
@@ -345,52 +367,5 @@ void main(void)
                 example.Run(60, 60);
             }
         }
-    }
-}
-
-class LimitedRotation {
-    private int rotationCounter;
-    private Matrix4 rotMatrix;
-    private sbyte reverse;
-    private int tickLimit;
-    private char axis { get; set; }
-
-    public LimitedRotation(char _axis, bool _reverse, int ticks) {
-       // rotationCounter = rotLength;
-        rotationCounter = 0;
-        rotMatrix = Matrix4.Identity;
-        if (_reverse)
-            reverse = -1;
-        else
-            reverse = 1;
-        axis = _axis;
-        tickLimit = ticks;
-    }
-
-    public Matrix4 getRotMat(double time) {
-        if (rotationCounter >= tickLimit)
-        {
-            rotationCounter = -(2 * tickLimit);
-            reverse *= -1;
-        }
-        setRotationMatrix(time);
-        rotationCounter++;
-        return rotMatrix;
-    }
-
-    private void setRotationMatrix(double time)
-    {        
-        switch (axis)
-        {
-            case 'y':
-                rotMatrix = Matrix4.CreateRotationY((float)Math.Sin(time * reverse)) * rotMatrix;
-                break;
-            case 'x':
-                rotMatrix = Matrix4.CreateRotationX((float)Math.Sin(time * reverse)) * rotMatrix;
-                break;
-            case 'z':
-                rotMatrix = Matrix4.CreateRotationZ((float)Math.Sin(time * reverse)) * rotMatrix;
-                break;
-        } 
     }
 }

@@ -69,6 +69,9 @@ namespace Exercise1
             // For Steve, this may correspond to the coordinates of the face texture.
             // Other cube instances can be created using other texture coordinates.
 
+            //Here I pass texture coordinates for all parts as a jagged array into cube constructor
+            //These could be calculated within the program, but i figured for so few of them I'll just read them out of the image
+
             Vector2[][] texVboArr = new Vector2[8][];
 
             //Reference Coordinates

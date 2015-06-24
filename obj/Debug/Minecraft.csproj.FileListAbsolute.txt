@@ -1,7 +1,0 @@
-C:\Users\Philipp\Desktop\FHS_CG_Uebung\Aufgabe_1\bin\Debug\Minecraft.exe.config
-C:\Users\Philipp\Desktop\FHS_CG_Uebung\Aufgabe_1\bin\Debug\Minecraft.exe
-C:\Users\Philipp\Desktop\FHS_CG_Uebung\Aufgabe_1\bin\Debug\Minecraft.pdb
-C:\Users\Philipp\Desktop\FHS_CG_Uebung\Aufgabe_1\bin\Debug\OpenTK.dll
-C:\Users\Philipp\Desktop\FHS_CG_Uebung\Aufgabe_1\obj\Debug\Minecraft.csprojResolveAssemblyReference.cache
-C:\Users\Philipp\Desktop\FHS_CG_Uebung\Aufgabe_1\obj\Debug\Minecraft.exe
-C:\Users\Philipp\Desktop\FHS_CG_Uebung\Aufgabe_1\obj\Debug\Minecraft.pdb

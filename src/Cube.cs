@@ -94,17 +94,10 @@ namespace Exercise1
             texVboData = texVboDataIn;
             texVboArr = texVboArrIn;
             for (int i = 0; i < positionVboData.Length; i+=6) {
-                //Vector3 direction = Vector3.Cross(positionVboData[i + 1] - positionVboData[i], positionVboData[i + 2] - positionVboData[i]);
+                //Calculate surface normal and pass it into array for use with each appropriate vertex
                 Vector3 direction = Vector3.Cross(positionVboData[i + 1] - positionVboData[i], positionVboData[i + 2] - positionVboData[i]);
                 for (int x = 0; x < 6; x++)
                     normalVboArr[i + x] = Vector3.Normalize(direction);
-                //normalVboArr[i/6] = Vector3.Normalize(direction);
-
-                //direction = Vector3.Cross(positionVboData[i] - positionVboData[i + 1], positionVboData[i+2] - positionVboData[i+1]);
-                //normalVboArr[i + 1] = Vector3.Normalize(direction);
-
-                //direction = Vector3.Cross(positionVboData[i + 1] - positionVboData[i + 2], positionVboData[i] - positionVboData[i + 2]);
-                //normalVboArr[i + 2] = Vector3.Normalize(direction);
             }
             foreach (Vector3 vec in normalVboArr)
                 Console.WriteLine(vec.ToString());
@@ -116,6 +109,7 @@ namespace Exercise1
 
         #region Initialization
 
+        //I automized the creation of the VBOs and VAOs, i then just use VAOHandle Array to rebind the buffer within the rendering loop
         void CreateVBOs()
         {
             positionVboHandle = GL.GenBuffer();
@@ -147,7 +141,6 @@ namespace Exercise1
                 VAOHandles[i] = GL.GenVertexArray();
                 GL.BindVertexArray(VAOHandles[i]);
 
-
                 GL.EnableVertexAttribArray(0);
                 GL.BindBuffer(BufferTarget.ArrayBuffer, positionVboHandle);
                 GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
@@ -172,12 +165,6 @@ namespace Exercise1
             // Bind texture to unit 0 (as in shader)
             GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2D, texture);
-
-            // Bind vertex buffers
-            //switch (toDraw.ToLower()) { 
-            //    case "HEAD":
-            //        GL.BindVertexArray(VAOHandles[1]);
-            //}
 
             // Draw data as triangle
             GL.DrawArrays(PrimitiveType.Triangles, 0, positionVboData.Length);
